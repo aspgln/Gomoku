@@ -20,7 +20,7 @@ void MainWindow::paintEvent(QPaintEvent *e)
     //create point of each intersection
     //need to be integrated into a vector or other container
 
-    int n = 3;
+    int n = 10;
 
     //create a vector that contains all the points at intersections
     QVector<QPoint> pointVector;
