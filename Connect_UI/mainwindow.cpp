@@ -1,19 +1,43 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QVector>
-#include <QMessageBox>
 
-//#include <Q
+#include <QPainter>
+#include <QMessageBox>
+#include <QFileDialog>
+
+#define STATUS_BLACK "Black"
+#define STATUS_WHITE "White"
+
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    canvas(LENGTH * STONE_SIZE - 1, LENGTH * STONE_SIZE - 1),
-    black(BLACK_STONE), white(WHITE_STONE)
+QMainWindow(parent),
+ui(new Ui::MainWindow),
+canvas(BOARD_LENGTH * STONE_SIZE - 1, BOARD_LENGTH * STONE_SIZE - 1),
+
+field_blk(IMAGE_WHITE),
+field_wht(IMAGE_BLACK)
 {
     ui->setupUi(this);
-    ui->boardLabel->installEventFilter(this);
+    
+    
+    ui->fieldLabel->installEventFilter(this);
+    
     initialize();
+}
+
+void MainWindow::initialize()
+{
+    for(int x=0; x < BOARD_LENGTH; x++)
+        for(int y=0; y < BOARD_LENGTH; y++)
+            this->fields[x][y] = NO_PLAYER;
+    
+    turn = BLACK;
+    ui->statusLabel->setText(STATUS_BLACK);
+    remainingFields = BOARD_LENGTH * BOARD_LENGTH;
+    
+    ui->fieldLabel->setFixedSize(BOARD_LENGTH * STONE_SIZE, BOARD_LENGTH * STONE_SIZE);
+    
+    make_a_move();
 }
 
 MainWindow::~MainWindow()
@@ -21,53 +45,51 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::initialize(){
-    for (int i = 0; i != LENGTH; i++){
-        for (int j = 0; j!= LENGTH; j++){
-            this->blocks[i][j] = NA;
-        }
-    }
-
-    turn = BLACK;
-
-    //Black first
-    ui->statusLabel->setText("Black");
-
-    blockRemain = LENGTH * LENGTH;
-
-    ui->boardLabel->setFixedSize(LENGTH * STONE_SIZE, LENGTH * STONE_SIZE);
-
-    set_board();
+void MainWindow::newGame()
+{
+    initialize();
 }
 
+bool MainWindow::eventFilter(QObject* object, QEvent* e)
+{
+    if(object != ui->fieldLabel || e->type() != QEvent::MouseButtonPress)
+        return false;
+    
+    const QMouseEvent* event = static_cast<const QMouseEvent*>(e);
+    
+    int x = event->x() / STONE_SIZE;
+    int y = event->y() / STONE_SIZE;
+    
+    this->fieldClicked(x, y);
+    
+    return false;
+}
 
-
-void MainWindow::set_board()
+void MainWindow::make_a_move()
 {
     QPainter painter(&canvas);
     painter.setBrush(Qt::NoBrush);
     painter.setPen(Qt::NoPen);
-
+    
     // background
-    //set background
-    QRect boardBackground(0,0, canvas.width(), canvas.height());
-    painter.fillRect(boardBackground, QColor(221, 163, 68));
-
+    painter.fillRect(0, 0, canvas.width(), canvas.height(), QColor(221, 163, 68));
+    
+    
     // fields
     painter.setPen(Qt::black);
-    for(int x = 0; x < LENGTH; x++)
+    for(int x = 0; x < BOARD_LENGTH; x++)
     {
-        for(int y = 0; y < LENGTH; y++)
+        for(int y = 0; y < BOARD_LENGTH; y++)
         {
             painter.drawRect(x * STONE_SIZE - 1, y * STONE_SIZE - 1, STONE_SIZE, STONE_SIZE);
-
-            if(blocks[x][y] == BLACK)
+            
+            if(fields[x][y] == BLACK)
             {
-                painter.drawImage(QPoint(x * STONE_SIZE, y * STONE_SIZE), black);
+                painter.drawImage(QPoint(x * STONE_SIZE, y * STONE_SIZE), field_wht);
             }
-            else if(blocks[x][y] == WHITE)
+            else if(fields[x][y] == WHITE)
             {
-                painter.drawImage(QPoint(x * STONE_SIZE, y * STONE_SIZE), white);
+                painter.drawImage(QPoint(x * STONE_SIZE, y * STONE_SIZE), field_blk);
             }
             else
             {
@@ -75,107 +97,135 @@ void MainWindow::set_board()
             }
         }
     }
-
-    ui->boardLabel->setPixmap(canvas);
+    
+    ui->fieldLabel->setPixmap(canvas);
 }
 
-int MainWindow::check(int i, int j, int step_i, int step_j, int* marker_i, int* marker_j)
+int MainWindow::check(int x, int y, int step_x, int step_y, int* marker_x, int* marker_y)
 {
-    *marker_i = i;
-    *marker_j = j;
-
-    if(i-step_i < 0 || i+step_i > LENGTH)
+    *marker_x = x;
+    *marker_y = y;
+    
+    if(x-step_x < 0 || x+step_x > BOARD_LENGTH)
         return 0;
-
-    if(j-step_j < 0 || j+step_j > LENGTH)
-            return 0;
-
-    if(blocks[i][j] == blocks[i + step_i][j + step_j])
+    
+    if(y-step_y < 0 || y+step_y > BOARD_LENGTH)
+        return 0;
+    
+    if(fields[x][y] == fields[x + step_x][y + step_y])
     {
-        return 1 + check(i + step_i, j + step_j, step_i, step_j, marker_i, marker_j);
+        return 1 + check(x + step_x, y + step_y, step_x, step_y, marker_x, marker_y);
     }
     return 0;
 }
 
-
-void MainWindow::make_move(int i, int j)
+void MainWindow::fieldClicked(int x, int y)
 {
-    if(blocks[i][j] != NA) // cannot reclaim claimed field
+    if(fields[x][y] > NO_PLAYER) // cannot reclaim claimed field
         return;
-
-    if(turn == NA)
+    
+    if(turn == NO_PLAYER)
         return;
-
-    blocks[i][j] = turn;
-
-    set_board();
-
+    
+    fields[x][y] = turn;
+    
+    make_a_move();
+    
     // check if the player has five in a row
-    int i1;
-    int j1;
-    int i2;
-    int j2;
-    if(check(i, j, -1, 0, &i1, &j1) + check(i, j, 1, 0, &i2, &j2) == 4
-        || check(i, j, 0, -1, &i1, &j1) + check(i, j, 0, 1, &i2, &j2) == 4
-
-        || check(i, j, -1, 1, &i1, &j1) + check(i, j, 1, -1, &i2, &j2) == 4
-
-        || check(i, j, -1, -1, &i1, &j1) + check(i, j, 1, 1, &i2, &j2) == 4)
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    if(check(x, y, -1, 0, &x1, &y1) + check(x, y, 1, 0, &x2, &y2) == 4
+       || check(x, y, 0, -1, &x1, &y1) + check(x, y, 0, 1, &x2, &y2) == 4
+       
+       || check(x, y, -1, 1, &x1, &y1) + check(x, y, 1, -1, &x2, &y2) == 4
+       
+       || check(x, y, -1, -1, &x1, &y1) + check(x, y, 1, 1, &x2, &y2) == 4)
     {
         // connect the row with a line
         QPainter p(&canvas);
         p.setRenderHint(QPainter::Antialiasing, true);
         p.setPen(QPen(Qt::gray, 5));
-        p.drawLine(STONE_SIZE * i1 + STONE_SIZE/2, STONE_SIZE * j1 + STONE_SIZE/2,
-                STONE_SIZE * i2 + STONE_SIZE/2, STONE_SIZE * j2 + STONE_SIZE/2);
+        p.drawLine(STONE_SIZE * x1 + STONE_SIZE/2, STONE_SIZE * y1 + STONE_SIZE/2,
+                   STONE_SIZE * x2 + STONE_SIZE/2, STONE_SIZE * y2 + STONE_SIZE/2);
         //TODO do this with one line only
-        p.drawLine(STONE_SIZE * i1 + STONE_SIZE/2, STONE_SIZE * j1 + STONE_SIZE/2,
-                        STONE_SIZE * i + STONE_SIZE/2, STONE_SIZE * j + STONE_SIZE/2);
-        ui->boardLabel->setPixmap(canvas);
-
+        p.drawLine(STONE_SIZE * x1 + STONE_SIZE/2, STONE_SIZE * y1 + STONE_SIZE/2,
+                   STONE_SIZE * x + STONE_SIZE/2, STONE_SIZE * y + STONE_SIZE/2);
+        ui->fieldLabel->setPixmap(canvas);
+        
         winner = turn;
-        turn = NA;
-//        showWinner();
+        turn = NO_PLAYER;
+        showResult();
         return;
     }
-
+    
     // if all the fields are full, it's a tie
-    blockRemain--;
-    if(blockRemain <= 0)
+    remainingFields--;
+    if(remainingFields <= 0)
     {
-        turn = NA;
+        turn = NO_PLAYER;
         winner = 0;
-//        showWinner();
+        showResult();
         return;
     }
-
-    // swap player
+    
+    // swap turn
     if(turn == BLACK)
     {
-        ui->statusLabel->setText("White");
+        ui->statusLabel->setText(STATUS_WHITE);
         turn = WHITE;
     }
     else
     {
-        ui->statusLabel->setText("BLACK");
+        ui->statusLabel->setText(STATUS_BLACK);
         turn = BLACK;
     }
 }
 
-
-void MainWindow::paintEvent(QPaintEvent *e)
+void MainWindow::showResult()
 {
-    QPainter painter(this);
-    QPixmap image(":/new/prefix1/circle_");
-
-    QPoint p1(10, 10);
-
-    QPen pointpen(Qt::blue);
-        pointpen.setWidth(6);
-        painter.setPen(pointpen);
-    painter.drawPoint(p1);
-    painter.drawPixmap(p1, image);
-
-
+    QMessageBox msgbox;
+    QString text;
+    if(winner == 0)
+        text = "It's a tie!";
+    else if(winner == BLACK)
+        text = "Black wins!";
+    else if(winner == WHITE)
+        text = "White wins!";
+    else
+        text = "Unknown error. Could not showResult winner";
+    
+    ui->statusLabel->setText(text);
+    msgbox.setWindowTitle("Game Over");
+    msgbox.setText(text);
+    msgbox.exec();
 }
 
+
+void MainWindow::saveScreenshot()
+{
+    QFileDialog fd(this);
+    fd.setNameFilter("PNG Image (*.png);;All Files (*)");
+    fd.setFileMode(QFileDialog::AnyFile);
+    fd.setConfirmOverwrite(true);
+    if(!fd.exec())
+        return;
+    
+    QMessageBox cmsgbox;
+    if(canvas.save(fd.selectedFiles().first(), "png", 0))
+        cmsgbox.setText("Screenshot saved!");
+    else
+        cmsgbox.setText("Failed to save screenshot!");
+    cmsgbox.exec();
+}
+
+void MainWindow::showAboutDialog()
+{
+    QMessageBox msgbox;
+    msgbox.setTextFormat(Qt::RichText);
+    msgbox.setText("About Gomoku");
+    msgbox.setMaximumSize(400, 600);
+    msgbox.setStandardButtons(QMessageBox::Ok);
+    msgbox.exec();
+}

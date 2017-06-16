@@ -2,60 +2,67 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QtGui>
-#include <QtCore>
+#include <QMouseEvent>
 #include <QPixmap>
 #include <QPainter>
-#include <QMouseEvent>
+
 namespace Ui {
-class MainWindow;
+    class MainWindow;
 }
 
-//IMAGE ICON DIDN"T ADD
-#define WHITE_STONE ":/images/white"
-#define BLACK_STONE ":/images/black"
-#define STONE_SIZE 21
-static const int LENGTH = 10;
 
-enum Player : int{
-    NA = 0,
-    WHITE = 1,
-    BLACK = 2,
+
+//#define IMAGE_ICON "images/gomoku.png"
+#define IMAGE_BLACK ":/images/black"
+#define IMAGE_WHITE ":/images/white"
+
+
+enum Player : int
+{
+    NO_PLAYER = 0,
+    BLACK = 1,
+    WHITE = 2,
 };
 
+static const int BOARD_LENGTH = 15;
 
+static const int STONE_SIZE = 21;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
-public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
-
 private:
     Ui::MainWindow *ui;
-
+    
+    int fields[BOARD_LENGTH][BOARD_LENGTH];
+    int remainingFields;
+    
     QPixmap canvas;
-    QImage black;
-    QImage white;
-
-
-    int blocks[LENGTH][LENGTH];
-    int blockRemain;
+    
     Player turn;
-
-    int winner;///////////char? String?
-
-
-void initialize();
-void set_board();
-void make_move(int i, int j);
-int check(int x, int y, int step_x, int step_y, int *markerX, int *markerY);
-//void showWinner();
-
-protected:
-    void paintEvent(QPaintEvent *e);
+    int winner;
+    
+    QImage field_blk;
+    QImage field_wht;
+    
+    void initialize(); // used to reset the game
+    void make_a_move();
+    void fieldClicked(int x, int y);
+    int check(int x, int y, int step_x, int step_y, int* marker_x, int* marker_y);
+    void showResult();
+    
+public:
+    explicit MainWindow(QWidget* parent = 0);
+    ~MainWindow();
+    
+    bool eventFilter(QObject* object, QEvent* event);
+    
+    public slots:
+    void newGame();
+    void saveScreenshot();
+    void showAboutDialog();
+    //TODO add save game
+    //TODO add undo last move
 };
 
 #endif // MAINWINDOW_H

@@ -1,1 +1,6 @@
-<RCC/>
+<RCC>
+    <qresource prefix="/new/prefix1">
+        <file alias="cross_">cross.png</file>
+        <file alias="circle_">circle.png</file>
+    </qresource>
+</RCC>
