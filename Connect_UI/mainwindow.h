@@ -50,8 +50,8 @@ private:
 
 void initialize();
 void set_board();
-//void make_move();
-//int check(int x, int y, int step_x, int step_y, int *markerX, int *markerY);
+void make_move(int i, int j);
+int check(int x, int y, int step_x, int step_y, int *markerX, int *markerY);
 //void showWinner();
 
 protected:

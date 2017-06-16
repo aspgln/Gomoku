@@ -42,14 +42,6 @@ void MainWindow::initialize(){
 
 
 
-//void MainWindow::set_board(){
-//    QPainter painter(&canvas);
-
-//    //set background
-//    QRect boardBackground(0,0, canvas.width(), canvas.height());
-//    painter.fillRect(boardBackground, QColor(221, 163, 68));
-//}
-
 void MainWindow::set_board()
 {
     QPainter painter(&canvas);
@@ -87,6 +79,90 @@ void MainWindow::set_board()
     ui->boardLabel->setPixmap(canvas);
 }
 
+int MainWindow::check(int i, int j, int step_i, int step_j, int* marker_i, int* marker_j)
+{
+    *marker_i = i;
+    *marker_j = j;
+
+    if(i-step_i < 0 || i+step_i > LENGTH)
+        return 0;
+
+    if(j-step_j < 0 || j+step_j > LENGTH)
+            return 0;
+
+    if(blocks[i][j] == blocks[i + step_i][j + step_j])
+    {
+        return 1 + check(i + step_i, j + step_j, step_i, step_j, marker_i, marker_j);
+    }
+    return 0;
+}
+
+
+void MainWindow::make_move(int i, int j)
+{
+    if(blocks[i][j] != NA) // cannot reclaim claimed field
+        return;
+
+    if(turn == NA)
+        return;
+
+    blocks[i][j] = turn;
+
+    set_board();
+
+    // check if the player has five in a row
+    int i1;
+    int j1;
+    int i2;
+    int j2;
+    if(check(i, j, -1, 0, &i1, &j1) + check(i, j, 1, 0, &i2, &j2) == 4
+        || check(i, j, 0, -1, &i1, &j1) + check(i, j, 0, 1, &i2, &j2) == 4
+
+        || check(i, j, -1, 1, &i1, &j1) + check(i, j, 1, -1, &i2, &j2) == 4
+
+        || check(i, j, -1, -1, &i1, &j1) + check(i, j, 1, 1, &i2, &j2) == 4)
+    {
+        // connect the row with a line
+        QPainter p(&canvas);
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setPen(QPen(Qt::gray, 5));
+        p.drawLine(STONE_SIZE * i1 + STONE_SIZE/2, STONE_SIZE * j1 + STONE_SIZE/2,
+                STONE_SIZE * i2 + STONE_SIZE/2, STONE_SIZE * j2 + STONE_SIZE/2);
+        //TODO do this with one line only
+        p.drawLine(STONE_SIZE * i1 + STONE_SIZE/2, STONE_SIZE * j1 + STONE_SIZE/2,
+                        STONE_SIZE * i + STONE_SIZE/2, STONE_SIZE * j + STONE_SIZE/2);
+        ui->boardLabel->setPixmap(canvas);
+
+        winner = turn;
+        turn = NA;
+//        showWinner();
+        return;
+    }
+
+    // if all the fields are full, it's a tie
+    blockRemain--;
+    if(blockRemain <= 0)
+    {
+        turn = NA;
+        winner = 0;
+//        showWinner();
+        return;
+    }
+
+    // swap player
+    if(turn == BLACK)
+    {
+        ui->statusLabel->setText("White");
+        turn = WHITE;
+    }
+    else
+    {
+        ui->statusLabel->setText("BLACK");
+        turn = BLACK;
+    }
+}
+
+
 void MainWindow::paintEvent(QPaintEvent *e)
 {
     QPainter painter(this);
@@ -99,72 +175,6 @@ void MainWindow::paintEvent(QPaintEvent *e)
         painter.setPen(pointpen);
     painter.drawPoint(p1);
     painter.drawPixmap(p1, image);
-
-
-//    QPainter painter(this);
-
-//    //create point of each intersection
-//    //need to be integrated into a vector or other container
-
-//    int n = 3;
-
-//    //create a vector that contains all the points at intersections
-//    QVector<QPoint> pointVector;
-
-//    // IMPROVEMENT!!!
-//    //could use iterator
-//    for (int i = 0; i != n+1; i++){
-//        for (int j  = 0; j != n+1; j++){
-
-//            pointVector.append(QPoint(j*100, i*100));
-//        }
-//    }
-
-//    //create a vector that contains all the rectangles on the board
-//    QVector<QRect> rectVector;
-
-//    // IMPROVEMENT!!!
-//    // create a vector contains all the units on the board with QRect
-//    //could use iterator
-//    for (int i = 0; i != n; i++){
-//        for (int j  = 0; j != n; j++){
-//            rectVector.append(QRect(pointVector[n*i + j],
-//                                     pointVector[(n+1)*(i+1) + (j)] ) );
-//        }
-//    }
-
-//    //brush
-//    QBrush brush(Qt::green, Qt::SolidPattern);
-//    for (int i = 0; i != n*n; i++){
-
-//        painter.fillRect(rectVector[i], brush);
-////        painter.drawText(rectVector[i], Qt::AlignCenter, "X");
-//    }
-
-
-//    painter.drawText(rectVector[3], Qt::AlignCenter, "QWER");
-
-////    for (int i = 0; i <n*n; i++){
-////        painter.drawText(rectVector[i], Qt::AlignCenter, "QWER");
-////    }
-
-//    //framepen
-//    QPen framepen(Qt::red);
-//    framepen.setWidth(6);
-//    painter.setPen(framepen);
-//    for (int i = 0; i != n*n; i++){
-//            painter.drawRect(rectVector[i]);
-//    }
-
-//    //pointpen
-//    QPen pointpen(Qt::blue);
-//    pointpen.setWidth(6);
-//    painter.setPen(pointpen);
-//    for (int i = 0; i != (n+1)*(n+1); i++){
-//            painter.drawPoint(pointVector[i]);
-//    }
-
-
 
 
 }
