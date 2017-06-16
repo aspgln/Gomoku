@@ -11,16 +11,19 @@ namespace Ui {
 class MainWindow;
 }
 
-#define CIRCLE_ICON "circle.png"
-#define CROSS_ICON "cross.png"
-#define ICON_SIZE 40
-static const int length = 10;
+//IMAGE ICON DIDN"T ADD
+#define WHITE_STONE ":/images/white"
+#define BLACK_STONE ":/images/black"
+#define STONE_SIZE 21
+static const int LENGTH = 10;
 
 enum Player : int{
-    NO_PLAYER = 0,
-    CIRCLE = 1,
-    CROSS = 2,
+    NA = 0,
+    WHITE = 1,
+    BLACK = 2,
 };
+
+
 
 class MainWindow : public QMainWindow
 {
@@ -34,16 +37,22 @@ private:
     Ui::MainWindow *ui;
 
     QPixmap canvas;
-    QImage cross;
-    QImage circle;
+    QImage black;
+    QImage white;
 
 
-    int board[length][length];
+    int blocks[LENGTH][LENGTH];
     int blockRemain;
     Player turn;
-    int winner;
+
+    int winner;///////////char? String?
 
 
+void initialize();
+void set_board();
+//void make_move();
+//int check(int x, int y, int step_x, int step_y, int *markerX, int *markerY);
+//void showWinner();
 
 protected:
     void paintEvent(QPaintEvent *e);
